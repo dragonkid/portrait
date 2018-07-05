@@ -4,7 +4,7 @@ import fire
 import json
 import jieba
 
-jieba.load_userdict("tag.dict")
+jieba.load_userdict("tags.dict")
 
 
 def extract_tags(line):
