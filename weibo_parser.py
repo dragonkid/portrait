@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 def extract_personal_infos():
+    """
+    extract weibo personal infos from xlsx to txt
+    :return:
+    """
     import xlrd
     book = xlrd.open_workbook(filename='data/微博.xlsx')
     sheet = book.sheet_by_index(0)
@@ -46,6 +50,9 @@ TAGS = {
 
 
 def unpack_info(line):
+    """
+    unpack txt to dict
+    """
     pass
 
 

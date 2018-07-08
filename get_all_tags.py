@@ -33,4 +33,3 @@ def get_all_tags(input, output):
                     tag_count[tag] = 1
 
         json.dump(tag_count, out_f)
-
