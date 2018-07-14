@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import copy
 import json
+import string
 
 import fire
 
@@ -21,7 +22,7 @@ def extract_personal_infos():
 
 info_structure = {
     'basic': {              # 基本信息
-        'name': '',         # 姓名
+        'name': '',         # 真实姓名
         'blood_group': '',  # 血型
         'nickname': '',     # 昵称
         'location': '',     # 所在地
@@ -60,16 +61,17 @@ info_structure = {
 }
 
 
-roots = {
+root_tags = {
     '基本信息': 'basic',
     '标签信息': 'tags',
     '联系信息': 'contacts',
     '工作信息': 'job',
     '教育信息': 'education'
 }
+
 leafs = {
     'basic': {
-        '姓名': 'name',
+        '真实姓名': 'name',
         '血型': 'blood_group',
         '昵称': 'nickname',
         '所在地': 'location',
@@ -103,21 +105,21 @@ leafs = {
 }
 
 
-def unpack_root(line):
-    root_unpacked = copy.copy(info_structure)
+def unpack_by_tags(line, tags):
+    unpacked = dict()
     tags_index = dict()
-    for k in roots.keys():
+    for k in tags.keys():
         index = line.find(k)
         if index == -1:
             continue
         tags_index[k] = index
 
     for tag, index in sorted(tags_index.items(), key=lambda x: x[1], reverse=True):
-        raw = line[index + len(tag):].strip()
-        root_unpacked[roots[tag]]['raw'] = raw
+        raw = line[index + len(tag):].strip(string.whitespace + '：')
+        unpacked[tags[tag]] = raw
         line = line[0:index]
 
-    return root_unpacked
+    return unpacked
 
 
 def unpack_info(line):
@@ -129,12 +131,15 @@ def unpack_info(line):
     ...info['basic']['location'] == '四川 宜宾'
     ...info['tags']['raw'] == '化妆造型瘦身减肥'
     ...info['basic']['raw'] == 'Ybwy0923所在地：四川 宜宾'
-    True
-    True
-    True
-    True
     """
-    info = unpack_root(line)
+    info = copy.deepcopy(info_structure)
+    for k, v in unpack_by_tags(line, root_tags).items():
+        info[k]['raw'] = v
+
+    for root_key, leaf_tags in leafs.items():
+        info[root_key].update(
+            unpack_by_tags(info[root_key]['raw'], leafs[root_key])
+        )
 
     return info
 
@@ -144,4 +149,6 @@ def unpack_infos(input, output):
     with open(input) as input_f, open(output, 'w') as output_f:
         for line in input_f:
             res = unpack_info(line)
+            if res['basic']['nickname'] == '':
+                continue
             output_f.write(json.dumps(res) + '\n')
