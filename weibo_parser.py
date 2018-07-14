@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import copy
+import json
+
+import fire
 
 
 def extract_personal_infos():
@@ -100,6 +103,23 @@ leafs = {
 }
 
 
+def unpack_root(line):
+    root_unpacked = copy.copy(info_structure)
+    tags_index = dict()
+    for k in roots.keys():
+        index = line.find(k)
+        if index == -1:
+            continue
+        tags_index[k] = index
+
+    for tag, index in sorted(tags_index.items(), key=lambda x: x[1], reverse=True):
+        raw = line[index + len(tag):].strip()
+        root_unpacked[roots[tag]]['raw'] = raw
+        line = line[0:index]
+
+    return root_unpacked
+
+
 def unpack_info(line):
     """
     unpack txt to dict
@@ -108,14 +128,20 @@ def unpack_info(line):
     ...info['basic']['nickname'] == 'Ybwy0923'
     ...info['basic']['location'] == '四川 宜宾'
     ...info['tags']['raw'] == '化妆造型瘦身减肥'
+    ...info['basic']['raw'] == 'Ybwy0923所在地：四川 宜宾'
+    True
     True
     True
     True
     """
-    # info = unpack_root(line)
-    pass
+    info = unpack_root(line)
+
+    return info
 
 
-# extract_personal_infos()
-
-
+@fire.Fire
+def unpack_infos(input, output):
+    with open(input) as input_f, open(output, 'w') as output_f:
+        for line in input_f:
+            res = unpack_info(line)
+            output_f.write(json.dumps(res) + '\n')
