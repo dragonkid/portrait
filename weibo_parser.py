@@ -5,6 +5,9 @@ import json
 import string
 
 import fire
+import jieba
+
+jieba.load_userdict('tags.dict')
 
 
 def extract_personal_infos():
@@ -57,6 +60,22 @@ info_structure = {
         'primary_school': '',       # 小学
         'technical_school': '',     # 技校
         'raw': ''
+    },
+    'browsing_history': {   # 浏览记录
+        'url': '',
+        'title': '',        # 标题
+        'count': 0,         # 浏览次数
+    },
+    'consumption_habit': {  # 消费习惯
+        'clothing': 0,      # 服饰美容
+        'dieting': 0,       # 饮食
+        'travelling': 0,    # 交通出行
+        'daily_commodities': 0, # 生活日用
+        'others': 0
+    },
+    'illegal': {
+        'yes': False,       # 是否违法
+        'type': '',         # 犯罪类型
     }
 }
 
@@ -101,8 +120,13 @@ leafs = {
         '初中': 'junior_high_school',
         '小学': 'primary_school',
         '技校': 'technical_school'
-    }
+    },
 }
+
+
+def split_tags(raw):
+    cuts = jieba.cut(raw, cut_all=False, HMM=False)
+    return list(cuts)
 
 
 def unpack_by_tags(line, tags):
@@ -116,7 +140,10 @@ def unpack_by_tags(line, tags):
 
     for tag, index in sorted(tags_index.items(), key=lambda x: x[1], reverse=True):
         raw = line[index + len(tag):].strip(string.whitespace + '：')
-        unpacked[tags[tag]] = raw
+        if tag == '标签':
+            unpacked[tags[tag]] = split_tags(raw)
+        else:
+            unpacked[tags[tag]] = raw
         line = line[0:index]
 
     return unpacked
