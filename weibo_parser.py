@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import csv
 import copy
 import json
 import string
+import random
 
 import fire
 import jieba
 
 jieba.load_userdict('tags.dict')
+reader = csv.reader(open('data/history.csv'))
+browsing_history = list(reader)
 
 
 def extract_personal_infos():
@@ -61,12 +65,14 @@ info_structure = {
         'technical_school': '',     # 技校
         'raw': ''
     },
-    'browsing_history': {   # 浏览记录
-        'url': '',
-        'title': '',        # 标题
-        'count': 0,         # 浏览次数
-    },
-    'consumption_habit': {  # 消费习惯
+    'browsing_history': [
+        {   # 浏览记录
+            'url': '',
+            'title': '',        # 标题
+            'count': 0,         # 浏览次数
+        },
+    ],
+    'consumption_habit': {  # 消费习惯（月均）
         'clothing': 0,      # 服饰美容
         'dieting': 0,       # 饮食
         'travelling': 0,    # 交通出行
@@ -75,7 +81,7 @@ info_structure = {
     },
     'illegal': {
         'yes': False,       # 是否违法
-        'type': '',         # 犯罪类型
+        'type': '',         # 犯罪类型：petition,criminal,alcohol_abuse
     }
 }
 
@@ -129,11 +135,14 @@ def split_tags(raw):
     return list(cuts)
 
 
-def unpack_by_tags(line, tags):
+def unpack_by_tags(line, tags, root=False):
     unpacked = dict()
     tags_index = dict()
     for k in tags.keys():
-        index = line.find(k)
+        if root:
+            index = line.find(k)
+        else:
+            index = line.find(k + '：')
         if index == -1:
             continue
         tags_index[k] = index
@@ -149,6 +158,32 @@ def unpack_by_tags(line, tags):
     return unpacked
 
 
+def random_cost(low, high):
+    rint = random.randint(low, high)
+    return rint - rint % 100
+
+
+def generate_consumption_habit():
+    consumption_habit = {
+        'clothing': random_cost(100, 5000),
+        'dieting': random_cost(100, 5000),
+        'travelling': random_cost(0, 5000),
+        'daily_commodities': random_cost(100, 5000),
+        'others': random_cost(0, 1000)
+    }
+    consumption_habit['total'] = sum(consumption_habit.values())
+    return consumption_habit
+
+
+def generate_browsing_history():
+    return [
+        {'url': url, 'title': title, 'count': int(count)}
+        for url, title, count in random.choices(
+            browsing_history, k=random.randint(0, 20)
+        )
+    ]
+
+
 def unpack_info(line):
     """
     unpack txt to dict
@@ -160,13 +195,18 @@ def unpack_info(line):
     ...info['basic']['raw'] == 'Ybwy0923所在地：四川 宜宾'
     """
     info = copy.deepcopy(info_structure)
-    for k, v in unpack_by_tags(line, root_tags).items():
+    for k, v in unpack_by_tags(line, root_tags, True).items():
         info[k]['raw'] = v
 
     for root_key, leaf_tags in leafs.items():
         info[root_key].update(
             unpack_by_tags(info[root_key]['raw'], leafs[root_key])
         )
+
+    info['consumption_habit'].update(
+        generate_consumption_habit()
+    )
+    info['browsing_history'] = generate_browsing_history()
 
     return info
 
@@ -179,3 +219,5 @@ def unpack_infos(input, output):
             if res['basic']['nickname'] == '':
                 continue
             output_f.write(json.dumps(res) + '\n')
+
+# print(unpack_info('基本信息昵称：叶云哲博客所在地：其他性别：男博客：http://blog.sina.cn/u/1026994820g简介：汽车营销管理咨询师注册时间：2014-03-01'))
